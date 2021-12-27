@@ -1,0 +1,29 @@
+version: "3.8"
+services:
+    traefik:
+        networks:
+            - proxy
+        image: traefik:v2.5.4
+        container_name: "local_traefik"
+        restart: unless-stopped
+        security_opt:
+            - no-new-privileges:true
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - /var/run/docker.sock:/var/run/docker.sock:ro # connection to the docker daemon for listening docker events       
+            - ./certs/:/etc/traefik/certs/:ro # SSL certificates
+            - ./static_conf.yml:/traefik.yml:ro # static traefik configuration
+            - ./conf/:/etc/traefik/conf/:ro # dynamic traefik configuration
+        labels:
+            - traefik.enable=true # if true, service will be published in traefik
+            - traefik.http.routers.traefik.entrypoints=websecure # setting entry point, that will be used by the service
+            - traefik.http.routers.traefik.rule=Host(`traefik.local`) # the rule by which request will be routed by traefik
+            - traefik.http.routers.traefik.tls=true # enabling tls for the router
+            - traefik.http.routers.traefik.service=api@internal # specifying a service for the router
+            - traefik.http.services.traefik-traefik.loadbalancer.server.port=888 # specifying the port to which request will be routed (on the destination service)
+networks:
+    proxy:
+        external: true
